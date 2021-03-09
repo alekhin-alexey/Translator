@@ -8,10 +8,6 @@ public interface Constants {
     String PROP_LANG_TO = "langTo";
     String PROP_DIR = "dir";
 
-    String API_ENDPOINT = "https://api.cognitive.microsofttranslator.com/";
-    String API_KEY = "1b103f78822349e4a6590091aa6603a2";
-    String API_PARSE_JSON = "application/json";
-
     String JSON_NODE_ROOT = "translation";
     String JSON_NODE_NAME = "name";
     String JSON_NODE_TEXT = "text";
@@ -20,7 +16,6 @@ public interface Constants {
     String XML_TAG_NAME_PROP = "entry";
     String XML_TAG_NAME_PROP_ATTRIBUTE = "key";
     String XML_FILE_EXT = ".xml";
-
 
     String LANG_NAME_DEFAULT = "English";
     String LANG_SUFFIX_DEFAULT = "en";

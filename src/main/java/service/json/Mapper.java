@@ -1,27 +1,29 @@
 package service.json;
 
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import constants.Constants;
 
 import java.io.IOException;
 
 public class Mapper {
-    private static ObjectMapper objectMapper = getDefaultObjectMapper();
+    private static ObjectMapper objectMapper = new ObjectMapper();
 
-    private static ObjectMapper getDefaultObjectMapper() {
-        ObjectMapper defaultObjectMapper = new ObjectMapper();
-        defaultObjectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return defaultObjectMapper;
+    public static ObjectMapper getObjectMapper() {
+        return objectMapper;
     }
 
-    public static JsonNode parseJson(String src) throws IOException {
-        return objectMapper.readTree(src);
+
+    public static String parseValue(final String key, final String value) throws IOException {
+        return objectMapper
+                .readTree(value)
+                .findValue(key)
+                .textValue();
     }
 
-    public static String createJson(String src) throws IOException {
+    public static String createJson(final String key, final String value) throws IOException {
         ObjectNode node = objectMapper.createObjectNode();
-        node.put(Constants.JSON_NODE_TEXT, src);
-        return "[".concat(objectMapper.writeValueAsString(node)).concat("]");
+        node.put(key, value);
+        return objectMapper
+                .writeValueAsString(node);
     }
 }

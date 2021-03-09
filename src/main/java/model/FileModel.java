@@ -1,27 +1,33 @@
 package model;
 
 public class FileModel {
-    private final String fileName;
-    private final String langContent;
+    /**
+     * original file name
+     */
+    private final String name;
+    /**
+     * language of data content
+     */
+    private final String lang;
 
-    public FileModel(String fileNameOriginal, String langContent) {
-        this.fileName = fileNameOriginal;
-        this.langContent = langContent;
+    public FileModel(String name, String lang) {
+        this.name = name;
+        this.lang = lang;
     }
 
-    public String getFileName() {
-        return fileName;
+    public String getName() {
+        return name;
     }
 
-    public String getLangContent() {
-        return langContent;
+    public String getLang() {
+        return lang;
     }
 
     @Override
     public String toString() {
         return "ModelFile{" +
-                "fileName='" + fileName + '\'' +
-                ", langContent='" + langContent + '\'' +
+                "name='" + name + '\'' +
+                ", lang='" + lang + '\'' +
                 '}';
     }
 }

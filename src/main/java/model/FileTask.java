@@ -1,21 +1,17 @@
 package model;
 
-import java.util.HashMap;
+import java.util.Map;
 
-public class FileData {
+public class FileTask {
     private final FileModel fileModel;
-    private final HashMap<String, String> content;
+    private final Map<String, String> content;
 
-    public FileData(FileModel fileModel, HashMap<String, String> content) {
+    public FileTask(FileModel fileModel, Map<String, String> content) {
         this.fileModel = fileModel;
         this.content = content;
     }
 
-    public String getLangContent() {
-        return fileModel.getLangContent();
-    }
-
-    public HashMap<String, String> getContent() {
+    public Map<String, String> getContent() {
         return content;
     }
 

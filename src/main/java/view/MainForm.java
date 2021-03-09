@@ -2,15 +2,18 @@ package view;
 
 import constants.Constants;
 import controller.FileHandler;
-import controller.Parser;
-import controller.Translator;
-import model.FileData;
+import controller.FileParser;
+import controller.FileTranslator;
+import controller.Languages;
 import model.FileModel;
-import model.Lang;
+import model.FileTask;
+import model.LangTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
-import service.api.Languages;
+import service.api.Translator;
+import service.api.TranslatorFactory;
+import service.api.TypesAPI;
 import service.files.FilePropertiesUtils;
 
 import javax.imageio.ImageIO;
@@ -22,6 +25,7 @@ import javax.xml.transform.TransformerException;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.*;
 
 public class MainForm extends JFrame {
@@ -29,14 +33,11 @@ public class MainForm extends JFrame {
     private JComboBox<String> cbLangFrom;
     private JComboBox<String> cbLangTo;
     private JTextArea textLog;
-    private Map<String, String> mapLang;
     private JProgressBar pb;
     private JButton btTranslate;
     private JButton btCancel;
 
-    private String userLangFrom = Constants.LANG_NAME_DEFAULT;
-    private String userLangTo = Constants.LANG_NAME_DEFAULT;
-
+    private Map<String, String> mapLanguages = Languages.getInstance().getLanguages(TypesAPI.MICROSOFT);
     private boolean isErrorFind = false;
 
     private SwingWorker<Void, String> swingWorker;
@@ -45,7 +46,6 @@ public class MainForm extends JFrame {
 
     public MainForm() {
         super("Translator");
-        getLangFromApi();
         initUI();
         readProperties();
     }
@@ -89,7 +89,7 @@ public class MainForm extends JFrame {
      * 3. translate content
      * 4. set content into result file
      */
-    private void translateFiles() {
+    private void translateFiles(String userLangFrom, String userLangTo) {
         btTranslate.setEnabled(false);
         btCancel.setEnabled(true);
         isErrorFind = false;
@@ -100,37 +100,43 @@ public class MainForm extends JFrame {
         swingWorker = new SwingWorker<Void, String>() {
             @Override
             protected Void doInBackground() {
-                Lang langUser = new Lang(userLangFrom, userLangTo, mapLang);
-                FileHandler fileTreat = new FileHandler(textDir.getText(), langUser);
+
+                LangTask langUser = new LangTask(
+                        Languages.getInstance().getLangSuffix(userLangFrom),
+                        Languages.getInstance().getLangSuffix(userLangTo));
+
+                FileHandler fileHandler = new FileHandler(textDir.getText(), langUser, mapLanguages);
+
                 // ... get file list (.xml) ...
-                Map<String, FileModel> files = fileTreat.listFiles(Constants.XML_FILE_EXT);
+                Map<String, FileModel> files = fileHandler.listFiles(Constants.XML_FILE_EXT);
                 if (!(files == null)) {
                     pb.setMaximum(files.size());
 
                     setTextLog("Start translation files from " +
-                            langUser.getLangFrom() + " to " +
-                            langUser.getLangTo() + "\n");
+                            userLangFrom + " to " +
+                            userLangTo + "\n");
 
                     final int[] countFiles = {1};
 
                     files.forEach((k, v) ->
                             {
-                                setTextLog("    ...file: " + v.getFileName() + "\n");
+                                setTextLog("    ...file: " + v.getName() + "\n");
                                 // ... current file ...
-                                String fileSrc = fileTreat.getFileSrc(v.getFileName());
+                                String fileSrc = fileHandler.getFileSrc(v.getName());
                                 // ... result file ...
-                                String fileDst = fileTreat.getFileDst(k, Constants.XML_FILE_EXT);
+                                String fileDst = fileHandler.getFileDst(k, Constants.XML_FILE_EXT);
 
-                                Parser parser = new Parser(
+
+                                FileParser parser = new FileParser(
                                         fileSrc,
                                         Constants.XML_TAG_NAME_ROOT,
                                         Constants.XML_TAG_NAME_PROP,
                                         Constants.XML_TAG_NAME_PROP_ATTRIBUTE);
 
                                 // ... get content from current file ...
-                                FileData data = null;
+                                FileTask data = null;
                                 try {
-                                    data = new FileData(v, parser.getFileContent());
+                                    data = new FileTask(v, parser.getFileContent());
                                 } catch (ParserConfigurationException | SAXException | IOException e2) {
                                     e2.printStackTrace();
                                     logger.error("Error parse file (e2) !", e2);
@@ -139,13 +145,19 @@ public class MainForm extends JFrame {
 
                                 // ... translate content ...
                                 if (data != null) {
-                                    Translator translated = new Translator(langUser, data);
+                                    TranslatorFactory factory = new TranslatorFactory();
+                                    Translator translator = factory.getTranslator(TypesAPI.MICROSOFT);
+
+                                    LangTask lang = new LangTask(v.getLang(), langUser.getLangTo());
+
+                                    FileTranslator translated = new FileTranslator(translator, lang, data);
 
                                     try {
-                                        data = translated.translateSentence();
+                                        data = translated.translateSentence(Constants.JSON_NODE_TEXT);
                                     } catch (IOException e3) {
                                         e3.printStackTrace();
-                                        logger.error("Error translation file (e3) !", e3);
+                                        logger.error("Error parse file (e3) !", e3);
+                                        setTextLog("Error parsing translated! Check ");
                                     }
 
                                     // ... set content into result file ...
@@ -261,6 +273,10 @@ public class MainForm extends JFrame {
                 selectDirectory(textDir);
             }
 
+            String userLangFrom = (String) cbLangFrom.getSelectedItem();
+            String userLangTo = (String) cbLangTo.getSelectedItem();
+
+            assert userLangFrom != null;
             if (userLangFrom.equals(userLangTo)) {
                 JOptionPane.showMessageDialog(
                         null,
@@ -269,7 +285,7 @@ public class MainForm extends JFrame {
                         JOptionPane.INFORMATION_MESSAGE
                 );
             } else {
-                translateFiles();
+                translateFiles(userLangFrom, userLangTo);
             }
 
         });
@@ -282,7 +298,6 @@ public class MainForm extends JFrame {
     }
 
     private void componentLang(JPanel pnLang) {
-
         TitledBorder title = BorderFactory
                 .createTitledBorder(BorderFactory
                         .createEtchedBorder(EtchedBorder.LOWERED), " Select languages:");
@@ -300,9 +315,6 @@ public class MainForm extends JFrame {
 
         cbLangFrom = setLanguages();
         cbLangFrom.setPreferredSize(new Dimension(150, 25));
-        cbLangFrom.addActionListener(
-                actionEvent -> userLangFrom = Objects.requireNonNull(cbLangFrom.getSelectedItem()).toString()
-        );
         pnLang.add(cbLangFrom);
 
         JLabel laLanguageTo = new JLabel("   to   ");
@@ -310,12 +322,9 @@ public class MainForm extends JFrame {
         pnLang.add(laLanguageTo);
         cbLangTo = setLanguages();
         cbLangTo.setPreferredSize(new Dimension(150, 25));
-        cbLangTo.addActionListener(
-                actionEvent -> userLangTo = Objects.requireNonNull(cbLangTo.getSelectedItem()).toString()
-        );
         pnLang.add(cbLangTo);
 
-        if (!(mapLang == null) && !(mapLang.isEmpty())) {
+        if (!(mapLanguages == null) && !(mapLanguages.isEmpty())) {
             setTextLog("Getting list of languages from API is successfully!\n");
         } else {
             logger.error("Error getting list of languages from API! Check your internet connection!");
@@ -357,8 +366,8 @@ public class MainForm extends JFrame {
         try {
             Map<String, String> propVal = new HashMap<>();
             propVal.put(Constants.PROP_DIR, textDir.getText());
-            propVal.put(Constants.PROP_LANG_FROM, userLangFrom);
-            propVal.put(Constants.PROP_LANG_TO, userLangTo);
+            propVal.put(Constants.PROP_LANG_FROM, (String) cbLangFrom.getSelectedItem());
+            propVal.put(Constants.PROP_LANG_TO, (String) cbLangTo.getSelectedItem());
             FilePropertiesUtils.writePropertiesFile(Constants.PROP_FILE_NAME, propVal);
         } catch (IOException e5) {
             e5.printStackTrace();
@@ -369,14 +378,16 @@ public class MainForm extends JFrame {
     private void readProperties() {
         try {
             Map<String, String> props = FilePropertiesUtils.readPropertiesFile(Constants.PROP_FILE_NAME);
-            String textDirProp = props.get(Constants.PROP_DIR);
-            if (!textDirProp.isEmpty()) textDir.setText(textDirProp);
-            if (!(mapLang == null) && !(mapLang.isEmpty())) {
-                String langFromProp = props.get(Constants.PROP_LANG_FROM);
-                if (!langFromProp.isEmpty()) cbLangFrom.setSelectedItem(langFromProp);
+            if (!(props == null)) {
+                String textDirProp = props.get(Constants.PROP_DIR);
+                if (!textDirProp.isEmpty()) textDir.setText(textDirProp);
+                if (!(mapLanguages == null) && !(mapLanguages.isEmpty())) {
+                    String langFromProp = props.get(Constants.PROP_LANG_FROM);
+                    if (!langFromProp.isEmpty()) cbLangFrom.setSelectedItem(langFromProp);
 
-                String langFromTo = props.get(Constants.PROP_LANG_TO);
-                if (!langFromTo.isEmpty()) cbLangTo.setSelectedItem(langFromTo);
+                    String langFromTo = props.get(Constants.PROP_LANG_TO);
+                    if (!langFromTo.isEmpty()) cbLangTo.setSelectedItem(langFromTo);
+                }
             }
         } catch (Exception e6) {
             e6.printStackTrace();
@@ -404,29 +415,18 @@ public class MainForm extends JFrame {
         }
     }
 
-    private void getLangFromApi() {
-        try {
-            Languages mapLanguages = Languages.getInstance();
-            mapLang = mapLanguages.getLanguages();
-        } catch (IOException e7) {
-            e7.printStackTrace();
-            logger.error("Error get languages from API (e7) !");
-        }
-
-    }
-
     private JComboBox<String> setLanguages() {
         DefaultComboBoxModel<String> cbModel = new DefaultComboBoxModel<>();
         JComboBox<String> cbLanguage = new JComboBox<>(cbModel);
-        if (!(mapLang == null) && !(mapLang.isEmpty())) {
-            SortedSet<String> sortedValues = new TreeSet<>(mapLang.values());
-            for (String elem : sortedValues) {
+        if (!(mapLanguages == null) && !(mapLanguages.isEmpty())) {
+            List<String> languages = new ArrayList<>(mapLanguages.values());
+            Collections.sort(languages);
+            for (String elem : languages) {
                 cbModel.addElement(elem);
             }
         } else {
             cbModel.addElement(Constants.LANG_NAME_DEFAULT);
         }
-        cbModel.setSelectedItem(Constants.LANG_NAME_DEFAULT);
         return cbLanguage;
     }
 }

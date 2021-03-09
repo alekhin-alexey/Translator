@@ -1,58 +1,39 @@
 package service.files;
 
+import constants.Constants;
+import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
-import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class FileUtilsTest {
 
+    // get list of xml files from user selected path
     @Test
-    void getListFiles() {
+    void ListFiles() {
+        String dirResources = "src/test/resources/xml/test_files/";
+        final String fileNameResult = "demo_messages.xml";
+        Set<String> filesXml = FileUtils.getListFiles(dirResources, Constants.XML_FILE_EXT);
 
-        String dir = "C:\\Users\\Alexey\\Documents\\_application\\";
-        Set<String> filesXml = Stream.of(Objects.requireNonNull(new File(dir).listFiles()))
-                .filter(file -> !file.isDirectory())
-                .filter(file -> file.toString().endsWith(".xml"))
-                .map(File::getName)
-                .collect(Collectors.toSet());
+        Assert.assertTrue(filesXml.contains(fileNameResult));
 
         filesXml.forEach(System.out::println);
-        System.out.println(filesXml.toString());
-        assertEquals(filesXml.toString(), "[demo_messages_new_fr.xml, demo_messages_new.xml, demo_messages.xml, demo_messages_fr.xml]");
     }
 
-/*
-    // ... !!! because small files ...
-    String content = null;
-    try {
-        content = new String(Files.readAllBytes(Paths.get(fileDst)));
-    } catch(IOException e) {
-        e.printStackTrace();
-    }
+    // if path empty
+    @Test
+    void listFilesEmpty() {
+        String dirResources = "src/test/resources/xml/empty_dir/";
+        Set<String> filesXml = FileUtils.getListFiles(dirResources, Constants.XML_FILE_EXT);
 
-    // ... replace translated ...
-    for(Map.Entry<String, String> pair :data.getContent().entrySet()) {
-        String tag = "</" + Constants.XML_TAG_NAME_PROP + ">";
-        content = content
-                .replace(
-                        ">" + pair.getKey().replace("\\n", "") + tag,
-                        ">" + pair.getValue()
-                                .replaceAll("([\\[\\]])", "")
-                                .replace("\\n", "") + tag);
+        final String result1 = "[]";
+        assertEquals(filesXml.toString(), result1);
+        final String result2 = "demo_messages.xml";
+        Assert.assertFalse(filesXml.contains(result2));
 
-        //content = content.replaceAll(">" + pair.getKey().replace("\\n","") + tag, ">" + pair.getValue().replaceAll("([\\[\\]\\n])", "")  + tag);
+        System.out.println(filesXml);
+
     }
-    // ... write data ...
-    try {
-        FileUtils.writeFile(fileDst, content);
-    } catch(IOException e) {
-        e.printStackTrace();
-    }
-*/
 }

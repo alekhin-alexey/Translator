@@ -18,7 +18,7 @@ public class App {
         );
 
         SwingUtilities.invokeLater(() -> {
-            String localDB = Constants.PATH.concat("\\local_db");
+            String localDB = Constants.PATH.concat("/local_db");
             File directory = new File(localDB);
             if (!directory.exists()) {
                 directory.mkdir();
