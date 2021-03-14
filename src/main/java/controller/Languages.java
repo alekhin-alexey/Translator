@@ -21,7 +21,7 @@ public class Languages {
     public synchronized Map<String, String> getLanguages(TypesAPI typesAPI) {
         if (mapLanguages == null) {
             TranslatorFactory factory = new TranslatorFactory();
-            Translator translator = factory.getTranslator(typesAPI); //TypesAPI.MICROSOFT
+            Translator translator = factory.getTranslator(typesAPI);
             mapLanguages = translator.getLanguages();
         }
         return mapLanguages;

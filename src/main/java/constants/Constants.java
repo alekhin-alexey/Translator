@@ -3,7 +3,7 @@ package constants;
 public interface Constants {
     String PATH = System.getProperty("user.dir");
 
-    String PROP_FILE_NAME = PATH + "\\config.properties";
+    String PROP_FILE_NAME = PATH + "/config.properties";
     String PROP_LANG_FROM = "langFrom";
     String PROP_LANG_TO = "langTo";
     String PROP_DIR = "dir";
